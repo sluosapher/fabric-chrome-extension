@@ -91,6 +91,7 @@ document.getElementById('processButton').addEventListener('click', async () => {
         return;
     }
     const combinedUserPrompt = `${userPrompt}\n\n${extractedText}`;
+    systemPrompt = `${systemPrompt}`; // Prepend the system prompt with a helpful message
 
     console.log('System Prompt:', systemPrompt);
     console.log('User Prompt:', combinedUserPrompt);
