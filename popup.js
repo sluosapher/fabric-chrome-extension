@@ -157,6 +157,15 @@ document.getElementById('processButton').addEventListener('click', async () => {
             resultContainer.textContent = 'Error: ' + (llmResponse?.error || 'Unknown error');
         }
     }
+
+    // save the llmResponse.result to system clipboard
+    navigator.clipboard.writeText(llmResponse.result).then(() => {
+        // prompt the user that the text has been copied to clipboard with an alert
+        alert('LLM response copied to clipboard!');
+        console.log('LLM response copied to clipboard');
+    }).catch(err => {
+        console.error('Failed to copy text: ', err);
+    });
 });
 
 // Handle the "Config" button click
