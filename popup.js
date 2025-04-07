@@ -48,67 +48,67 @@ document.addEventListener('DOMContentLoaded', populateDropdown);
 
 document.getElementById('processButton').addEventListener('click', () => {
     //send message to check configuration
-    chrome.runtime.sendMessage({ action: 'checkConfig' }, (response) => {
-       return
-    });
+    chrome.runtime.sendMessage({ action: 'checkConfig' });
+
     // Get the active tab
     chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
-        // if (tabs.length > 0) {
-        //     const activeTab = tabs[0];
+        if (tabs.length === 0) {
+            console.error('No active tab found.');
+            return;
+        }
 
-            // Send the "extractText" action to the background script
-            chrome.runtime.sendMessage({ action: 'extractText' }, (response) => {
-                if (response && response.text) {
-                    const extractedText = response.text; // Store the extracted text for later use
+        // Send the "extractText" action to the background script
+        chrome.runtime.sendMessage({ action: 'extractText' }, (response) => {
+            if (response && response.text) {
+                const extractedText = response.text; // Store the extracted text for later use
 
-                    // Now get the user selected pattern name
-                    const patternSelect = document.getElementById('patternSelect');
-                    const selectedPattern = patternSelect.value;
+                // Now get the user selected pattern name
+                const patternSelect = document.getElementById('patternSelect');
+                const selectedPattern = patternSelect.value;
 
-                    // Get combined prompts
-                    getPatternPrompts(selectedPattern).then(({ systemPrompt, userPrompt }) => {
-                        // Combine the extracted text with the user prompt
-                        userPrompt = `${userPrompt}\n\n${extractedText}`; // Combine the prompts with the extracted text
+                // Get combined prompts
+                getPatternPrompts(selectedPattern).then(({ systemPrompt, userPrompt }) => {
+                    // Combine the extracted text with the user prompt
+                    userPrompt = `${userPrompt}\n\n${extractedText}`; // Combine the prompts with the extracted text
 
-                        console.log('System Prompt:', systemPrompt); // Debugging line to check system prompt
-                        console.log('User Prompt:', userPrompt); // Debugging line to check user prompt
+                    console.log('System Prompt:', systemPrompt); // Debugging line to check system prompt
+                    console.log('User Prompt:', userPrompt); // Debugging line to check user prompt
 
-                        // Send the text and prompts to the background script
-                        chrome.runtime.sendMessage({
-                            action: 'sendToLLM',
-                            data: {
-                                systemPrompt: systemPrompt,
-                                UserPrompt: userPrompt
-                            }
-                        }, (response) => {
-                            const resultContainer = document.getElementById('resultContainer');
-                            if (response.success) {
-                                // console.log('Response from LLM:', response.result); // Debugging line to check LLM response
-                                //get the url of the current tab
-                                const currentTab = tabs[0];
-                                const currentUrl = currentTab.url;
-                                console.log('Current URL:', currentUrl); // Debugging line to check current URL
+                    // Send the text and prompts to the background script
+                    chrome.runtime.sendMessage({
+                        action: 'sendToLLM',
+                        data: {
+                            systemPrompt: systemPrompt,
+                            UserPrompt: userPrompt
+                        }
+                    }, (response) => {
+                        const resultContainer = document.getElementById('resultContainer');
+                        if (response.success) {
+                            // console.log('Response from LLM:', response.result); // Debugging line to check LLM response
+                            //get the url of the current tab
+                            const currentTab = tabs[0];
+                            const currentUrl = currentTab.url;
+                            console.log('Current URL:', currentUrl); // Debugging line to check current URL
 
-                                // Append the line [Link to the source](<currentUrl>) to the result
-                                response.result += `\n\n[Link to the source](${currentUrl})`;
-                                
-                                if (resultContainer) {
-                                    resultContainer.textContent = response.result; // Display the result in the result container
-                                } else {
-                                    console.error('Error: resultContainer element not found.');
-                                }
+                            // Append the line [Link to the source](<currentUrl>) to the result
+                            response.result += `\n\n[Link to the source](${currentUrl})`;
+
+                            if (resultContainer) {
+                                resultContainer.textContent = response.result; // Display the result in the result container
                             } else {
-                                console.error('Error from LLM:', response.error);
-                                resultContainer.textContent = 'Error: ' + response.error; // Display the error in the result container
+                                console.error('Error: resultContainer element not found.');
                             }
-                        });
+                        } else {
+                            console.error('Error from LLM:', response.error);
+                            resultContainer.textContent = 'Error: ' + response.error; // Display the error in the result container
+                        }
                     });
+                });
 
-                } else {
-                    console.error('Failed to extract text or no response received.');
-                }
-            });
-        // }
+            } else {
+                console.error('Failed to extract text or no response received.');
+            }
+        });
     });
 });
 
