@@ -29,6 +29,22 @@ async function fetchPatternNames() {
     return patternNames
 }
 
+// Function to save the selected pattern to local storage
+function saveSelectedPattern(pattern) {
+    chrome.storage.local.set({ 'selected_pattern': pattern }, () => {
+        console.log('Pattern saved:', pattern);
+        updateSelectedPatternDisplay(pattern);
+    });
+}
+
+// Function to update the selected pattern display
+function updateSelectedPatternDisplay(pattern) {
+    const selectedPatternElement = document.getElementById('selectedPattern');
+    if (selectedPatternElement) {
+        selectedPatternElement.textContent = pattern || 'None';
+    }
+}
+
 async function populateDropdown() {
     console.log('Populating dropdown...'); // Debugging line to indicate dropdown population
     const patternNames = await fetchPatternNames();
@@ -40,8 +56,21 @@ async function populateDropdown() {
         option.textContent = name;
         dropdown.appendChild(option);
     });
+    
+    // Load the previously selected pattern from storage
+    chrome.storage.local.get(['selected_pattern'], (result) => {
+        if (result.selected_pattern) {
+            dropdown.value = result.selected_pattern;
+            updateSelectedPatternDisplay(result.selected_pattern);
+        }
+    });
+    
+    // Add event listener to save the selected pattern when it changes
+    dropdown.addEventListener('change', (event) => {
+        const selectedPattern = event.target.value;
+        saveSelectedPattern(selectedPattern);
+    });
 }
-
 
 // Call populateDropdown when the document is ready
 document.addEventListener('DOMContentLoaded', populateDropdown);
@@ -70,6 +99,7 @@ document.getElementById('processButton').addEventListener('click', async () => {
     const extractResponse = await new Promise((resolve) => {
         chrome.runtime.sendMessage({ action: 'extractText' }, resolve);
     });
+    console.log('Extract response:', extractResponse); // Debugging line to check extract response
     if (!extractResponse || !extractResponse.text) {
         console.error('Failed to extract text or no response received.');
         return;
@@ -81,17 +111,20 @@ document.getElementById('processButton').addEventListener('click', async () => {
     const patternSelect = document.getElementById('patternSelect');
     const selectedPattern = patternSelect.value;
 
-    let systemPrompt, userPrompt; // Declare variables in the outer scope
+    // Save the selected pattern to local storage
+    saveSelectedPattern(selectedPattern);
 
     // Get combined prompts
+    let systemPrompt, userPrompt;
     try {
-        const { systemPrompt, userPrompt } = await getPatternPrompts(selectedPattern);
+        const prompts = await getPatternPrompts(selectedPattern);
+        systemPrompt = prompts.systemPrompt;
+        userPrompt = prompts.userPrompt;
     } catch (error) {
         console.error('Failed to fetch pattern prompts:', error);
         return;
     }
     const combinedUserPrompt = `${userPrompt}\n\n${extractedText}`;
-    systemPrompt = `${systemPrompt}`; // Prepend the system prompt with a helpful message
 
     console.log('System Prompt:', systemPrompt);
     console.log('User Prompt:', combinedUserPrompt);
