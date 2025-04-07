@@ -1,19 +1,32 @@
-function checkAndPromptForCredentials() {
-  chrome.storage.local.get(['apiKey', 'apiUrl'], (result) => {
-    console.log('Stored API credentials:', result); // Debugging line to check stored credentials
-    if (!result.apiKey || !result.apiUrl) {
-      console.log('API credentials not set. Opening options page for input.');
+function checkAndPromptForConfig() {
+  chrome.storage.local.get(['apiKey', 'apiUrl','modelName'], (result) => {
+    console.log('Stored API configurations:', result); // Debugging line to check stored credentials
+    if (!result.apiKey || !result.apiUrl || !result.modelName) {
+      console.log('API configurations not set. Opening options page for input.');
       chrome.runtime.openOptionsPage(); // Opens the extension's options page
-    } else {
-      console.log('API credentials are set. Opening popup.');
-      chrome.windows.create({
-        url: 'popup.html',
-        type: 'popup',
-        width: 400,
-        height: 600
-      });
-    }
+    } 
   });
+}
+
+function extractTextContent() {
+  let textContent = '';
+  const elements = document.body.getElementsByTagName('*');
+
+  console.log('Extracting text from elements:', elements); // Debugging line to check extracted elements
+  
+  for (let element of elements) {
+    // exclude element of ads, style, script, meta, format, and other trivial elements
+    if (element.tagName === 'SCRIPT' || element.tagName === 'STYLE' || element.tagName === 'META' || element.tagName === 'LINK' || element.tagName === 'HEAD') {
+        continue;
+    }
+    if (element.innerText) {
+      textContent += element.innerText + '\\n';
+    }
+  }
+
+  console.log('Extracted text content:', textContent); // Debugging line to check extracted text content
+  
+  return textContent;
 }
 
 // Remove the call from the onInstalled listener
@@ -21,20 +34,14 @@ chrome.runtime.onInstalled.addListener(() => {
   console.log('Fabric Extension installed.');
 });
 
-// // Add a listener for the extension button click
-// chrome.action.onClicked.addListener(() => {
-//   console.log('Extension button clicked.');
-//   checkAndPromptForCredentials();
-// });
-
 
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   if (request.action === 'sendToLLM') {
     const { systemPrompt, UserPrompt } = request.data;
-    chrome.storage.local.get(['apiKey', 'apiUrl'], (result) => {
-      console.log('Stored API credentials:', result); // Debugging line to check stored credentials
-      if (!result.apiKey || !result.apiUrl) {
-        sendResponse({ success: false, error: 'API credentials not set.' });
+    chrome.storage.local.get(['apiKey', 'apiUrl', 'modelName'], (result) => {
+      console.log('Stored API configurations:', result); // Debugging line to check stored credentials
+      if (!result.apiKey || !result.apiUrl || !result.modelName) {
+        sendResponse({ success: false, error: 'API configurations not set.' });
         return;
       }
 
@@ -45,12 +52,12 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
           'Authorization': `Bearer ${result.apiKey}`
         },
         body: JSON.stringify({
-          model: 'gpt-4o-mini',
+          model: result.modelName,
           messages: [
             { role: 'system', content: systemPrompt },
             { role: 'user', content: UserPrompt }
           ],
-          max_tokens: 150
+          max_tokens: 300,
         })
       })
       .then(response => response.json())
@@ -68,4 +75,22 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
 
     return true; // Indicates that the response will be sent asynchronously
   }
+
+  if (request.action === 'checkConfig') {
+    checkAndPromptForConfig();
+  }
+
+  if (request.action === 'extractText') {
+    chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+        if (tabs.length > 0) {
+            chrome.tabs.sendMessage(tabs[0].id, { action: 'extractText' }, (response) => {
+                sendResponse(response);
+            });
+        } else {
+            sendResponse({ error: 'No active tab found' });
+        }
+    });
+    return true; // Indicates that the response will be sent asynchronously
+}
+
 });

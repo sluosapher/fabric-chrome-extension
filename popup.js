@@ -47,13 +47,17 @@ async function populateDropdown() {
 document.addEventListener('DOMContentLoaded', populateDropdown);
 
 document.getElementById('processButton').addEventListener('click', () => {
+    //send message to check configuration
+    chrome.runtime.sendMessage({ action: 'checkConfig' }, (response) => {
+       return
+    });
     // Get the active tab
     chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
-        if (tabs.length > 0) {
-            const activeTab = tabs[0];
+        // if (tabs.length > 0) {
+        //     const activeTab = tabs[0];
 
-            // Send the "extractText" action to the content script
-            chrome.tabs.sendMessage(activeTab.id, { action: 'extractText' }, (response) => {
+            // Send the "extractText" action to the background script
+            chrome.runtime.sendMessage({ action: 'extractText' }, (response) => {
                 if (response && response.text) {
                     const extractedText = response.text; // Store the extracted text for later use
 
@@ -96,7 +100,7 @@ document.getElementById('processButton').addEventListener('click', () => {
                     console.error('Failed to extract text or no response received.');
                 }
             });
-        }
+        // }
     });
 });
 
