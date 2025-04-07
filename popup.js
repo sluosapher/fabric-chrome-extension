@@ -83,7 +83,15 @@ document.getElementById('processButton').addEventListener('click', () => {
                         }, (response) => {
                             const resultContainer = document.getElementById('resultContainer');
                             if (response.success) {
-                                console.log('Response from LLM:', response.result); // Debugging line to check LLM response
+                                // console.log('Response from LLM:', response.result); // Debugging line to check LLM response
+                                //get the url of the current tab
+                                const currentTab = tabs[0];
+                                const currentUrl = currentTab.url;
+                                console.log('Current URL:', currentUrl); // Debugging line to check current URL
+
+                                // Append the line [Link to the source](<currentUrl>) to the result
+                                response.result += `\n\n[Link to the source](${currentUrl})`;
+                                
                                 if (resultContainer) {
                                     resultContainer.textContent = response.result; // Display the result in the result container
                                 } else {
