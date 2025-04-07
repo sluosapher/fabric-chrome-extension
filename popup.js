@@ -46,72 +46,84 @@ async function populateDropdown() {
 // Call populateDropdown when the document is ready
 document.addEventListener('DOMContentLoaded', populateDropdown);
 
-document.getElementById('processButton').addEventListener('click', () => {
-    //send message to check configuration
-    chrome.runtime.sendMessage({ action: 'checkConfig' });
+document.getElementById('processButton').addEventListener('click', async () => {
+    // Check configuration
+    const configResponse = await new Promise((resolve) => {
+        chrome.runtime.sendMessage({ action: 'checkConfig' }, resolve);
+    });
+    console.log('Configuration check response:', configResponse); // Debugging line to check configuration response
+    if (!configResponse.success) {
+        console.error('Configuration is invalid:', configResponse.error);
+        return;
+    }
 
     // Get the active tab
-    chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
-        if (tabs.length === 0) {
-            console.error('No active tab found.');
-            return;
-        }
-
-        // Send the "extractText" action to the background script
-        chrome.runtime.sendMessage({ action: 'extractText' }, (response) => {
-            if (response && response.text) {
-                const extractedText = response.text; // Store the extracted text for later use
-
-                // Now get the user selected pattern name
-                const patternSelect = document.getElementById('patternSelect');
-                const selectedPattern = patternSelect.value;
-
-                // Get combined prompts
-                getPatternPrompts(selectedPattern).then(({ systemPrompt, userPrompt }) => {
-                    // Combine the extracted text with the user prompt
-                    userPrompt = `${userPrompt}\n\n${extractedText}`; // Combine the prompts with the extracted text
-
-                    console.log('System Prompt:', systemPrompt); // Debugging line to check system prompt
-                    console.log('User Prompt:', userPrompt); // Debugging line to check user prompt
-
-                    // Send the text and prompts to the background script
-                    chrome.runtime.sendMessage({
-                        action: 'sendToLLM',
-                        data: {
-                            systemPrompt: systemPrompt,
-                            UserPrompt: userPrompt
-                        }
-                    }, (response) => {
-                        const resultContainer = document.getElementById('resultContainer');
-                        if (response.success) {
-                            // console.log('Response from LLM:', response.result); // Debugging line to check LLM response
-                            //get the url of the current tab
-                            const currentTab = tabs[0];
-                            const currentUrl = currentTab.url;
-                            console.log('Current URL:', currentUrl); // Debugging line to check current URL
-
-                            // Append the line [Link to the source](<currentUrl>) to the result
-                            response.result += `\n\n[Link to the source](${currentUrl})`;
-
-                            if (resultContainer) {
-                                resultContainer.textContent = response.result; // Display the result in the result container
-                            } else {
-                                console.error('Error: resultContainer element not found.');
-                            }
-                        } else {
-                            console.error('Error from LLM:', response.error);
-                            resultContainer.textContent = 'Error: ' + response.error; // Display the error in the result container
-                        }
-                    });
-                });
-
-            } else {
-                console.error('Failed to extract text or no response received.');
-            }
-        });
+    const tabs = await new Promise((resolve) => {
+        chrome.tabs.query({ active: true, currentWindow: true }, resolve);
     });
-});
+    if (tabs.length === 0) {
+        console.error('No active tab found.');
+        return;
+    }
 
+    // Send the "extractText" action to the background script
+    const extractResponse = await new Promise((resolve) => {
+        chrome.runtime.sendMessage({ action: 'extractText' }, resolve);
+    });
+    if (!extractResponse || !extractResponse.text) {
+        console.error('Failed to extract text or no response received.');
+        return;
+    }
+
+    const extractedText = extractResponse.text;
+
+    // Get the user-selected pattern name
+    const patternSelect = document.getElementById('patternSelect');
+    const selectedPattern = patternSelect.value;
+
+    let systemPrompt, userPrompt; // Declare variables in the outer scope
+
+    // Get combined prompts
+    try {
+        const { systemPrompt, userPrompt } = await getPatternPrompts(selectedPattern);
+    } catch (error) {
+        console.error('Failed to fetch pattern prompts:', error);
+        return;
+    }
+    const combinedUserPrompt = `${userPrompt}\n\n${extractedText}`;
+
+    console.log('System Prompt:', systemPrompt);
+    console.log('User Prompt:', combinedUserPrompt);
+
+    // Send the text and prompts to the background script
+    const llmResponse = await new Promise((resolve) => {
+        chrome.runtime.sendMessage({
+            action: 'sendToLLM',
+            data: {
+                systemPrompt: systemPrompt,
+                UserPrompt: combinedUserPrompt,
+            },
+        }, resolve);
+    });
+
+    const resultContainer = document.getElementById('resultContainer');
+    if (llmResponse && llmResponse.success) {
+        const currentTab = tabs[0];
+        const currentUrl = currentTab.url;
+        llmResponse.result += `\n\n[Link to the source](${currentUrl})`;
+
+        if (resultContainer) {
+            resultContainer.textContent = llmResponse.result;
+        } else {
+            console.error('Error: resultContainer element not found.');
+        }
+    } else {
+        console.error('Error from LLM:', llmResponse?.error || 'Unknown error');
+        if (resultContainer) {
+            resultContainer.textContent = 'Error: ' + (llmResponse?.error || 'Unknown error');
+        }
+    }
+});
 
 // Handle the "Config" button click
 document.getElementById('configButton').addEventListener('click', () => {

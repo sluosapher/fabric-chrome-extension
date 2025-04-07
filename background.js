@@ -1,12 +1,12 @@
-function checkAndPromptForConfig() {
-  chrome.storage.local.get(['apiKey', 'apiUrl','modelName'], (result) => {
-    console.log('Stored API configurations:', result); // Debugging line to check stored credentials
-    if (!result.apiKey || !result.apiUrl || !result.modelName) {
-      console.log('API configurations not set. Opening options page for input.');
-      chrome.runtime.openOptionsPage(); // Opens the extension's options page
-    } 
-  });
-}
+// function checkAndPromptForConfig() {
+//   chrome.storage.local.get(['apiKey', 'apiUrl','modelName'], (result) => {
+//     console.log('Stored API configurations:', result); // Debugging line to check stored credentials
+//     if (!result.apiKey || !result.apiUrl || !result.modelName) {
+//       console.log('API configurations not set. Opening options page for input.');
+//       chrome.runtime.openOptionsPage(); // Opens the extension's options page
+//     } 
+//   });
+// }
 
 function extractTextContent() {
   let textContent = '';
@@ -77,8 +77,18 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   }
 
   if (request.action === 'checkConfig') {
-    checkAndPromptForConfig();
-  }
+    chrome.storage.local.get(['apiKey', 'apiUrl', 'modelName'], (result) => {
+        console.log('Stored API configurations:', result); // Debugging line to check stored credentials
+        if (!result.apiKey || !result.apiUrl || !result.modelName) {
+            console.log('API configurations not set. Opening options page for input.');
+            chrome.runtime.openOptionsPage(); // Opens the extension's options page
+            sendResponse({ success: false, error: 'API configurations not set.' }); // Send response
+        } else {
+            sendResponse({ success: true }); // Send response
+        }
+    });
+    return true; // Indicates that the response will be sent asynchronously
+}
 
   if (request.action === 'extractText') {
     chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
