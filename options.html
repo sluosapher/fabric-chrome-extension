@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Fabric Extension Options</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 20px;
+    }
+    label {
+      display: block;
+      margin-bottom: 5px;
+    }
+    input {
+      width: 100%;
+      padding: 8px;
+      margin-bottom: 15px;
+      box-sizing: border-box;
+    }
+    button {
+      padding: 10px 15px;
+      background-color: #0078d4;
+      color: white;
+      border: none;
+      cursor: pointer;
+    }
+    button:hover {
+      background-color: #005a9e;
+    }
+    .clear-button {
+      background-color: #d9534f;
+    }
+    .clear-button:hover {
+      background-color: #c9302c;
+    }
+  </style>
+</head>
+<body>
+  <h1>Fabric Extension Options</h1>
+  <form id="options-form">
+    <label for="apiUrl">API URL:</label>
+    <input type="url" id="apiUrl" placeholder="Enter the API URL" required>
+
+    <label for="apiKey">API Key:</label>
+    <input type="text" id="apiKey" placeholder="Enter your API key" required>
+
+    <button type="submit">Save</button>
+    <button type="button" id="clear-button" class="clear-button">Clear</button>
+  </form>
+  <p id="status" style="color: green; display: none;">Options saved successfully!</p>
+  <script src="options.js"></script>
+</body>
+</html>

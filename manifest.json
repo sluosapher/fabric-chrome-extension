@@ -1,0 +1,31 @@
+{
+  "manifest_version": 3,
+  "name": "Fabric Extension",
+  "version": "1.0",
+  "description": "A Chrome extension that extracts text, allows pattern selection, and interacts with a remote LLM model.",
+  "permissions": [
+    "activeTab",
+    "scripting",
+    "storage"
+  ],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "options_page": "options.html",
+  "action": {
+    "default_popup": "popup.html",
+    "default_icon": "images/icon48.png",
+    "default_title": "Fabric Extension"
+  },
+  "content_scripts": [
+    {
+      "matches": ["<all_urls>"],
+      "js": ["content.js"]
+    }
+  ],
+  "icons": {
+    "16": "images/icon16.png",
+    "48": "images/icon48.png",
+    "128": "images/icon128.png"
+  }
+}
