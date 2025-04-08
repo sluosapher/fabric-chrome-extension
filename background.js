@@ -1,13 +1,3 @@
-// function checkAndPromptForConfig() {
-//   chrome.storage.local.get(['apiKey', 'apiUrl','modelName'], (result) => {
-//     console.log('Stored API configurations:', result); // Debugging line to check stored credentials
-//     if (!result.apiKey || !result.apiUrl || !result.modelName) {
-//       console.log('API configurations not set. Opening options page for input.');
-//       chrome.runtime.openOptionsPage(); // Opens the extension's options page
-//     } 
-//   });
-// }
-
 function extractTextContent() {
   let textContent = '';
   const elements = document.body.getElementsByTagName('*');
@@ -29,7 +19,7 @@ function extractTextContent() {
   return textContent;
 }
 
-// Remove the call from the onInstalled listener
+// This function is called when the extension is installed or updated
 chrome.runtime.onInstalled.addListener(() => {
   console.log('Fabric Extension installed.');
 });

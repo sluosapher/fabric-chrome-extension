@@ -10,11 +10,6 @@ async function fetchPatternPrompts(patternName) {
     return { systemPrompt, userPrompt };
 }
 
-// function extractMainContent() {
-//     const mainContent = document.querySelector('main').innerText; // Adjust the selector as needed
-//     return `The source code of the main part of the web page which the user is interested in is below:\n${mainContent}`;
-// }
-
 async function getPatternPrompts(patternName) {
     const { systemPrompt, userPrompt } = await fetchPatternPrompts(patternName);
     return { systemPrompt, userPrompt};
