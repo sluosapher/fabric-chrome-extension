@@ -71,6 +71,15 @@ async function populateDropdown() {
 document.addEventListener('DOMContentLoaded', populateDropdown);
 
 document.getElementById('processButton').addEventListener('click', async () => {
+    // first showing "working..." message
+    let resultContainer = document.getElementById('resultContainer');
+    if (resultContainer) {
+        resultContainer.textContent = 'Working...';
+    } else {
+        console.error('Error: resultContainer element not found.');
+        return;
+    }
+
     // Check configuration
     const configResponse = await new Promise((resolve) => {
         chrome.runtime.sendMessage({ action: 'checkConfig' }, resolve);
@@ -135,14 +144,14 @@ document.getElementById('processButton').addEventListener('click', async () => {
         }, resolve);
     });
 
-    const resultContainer = document.getElementById('resultContainer');
+    resultContainer = document.getElementById('resultContainer');
     if (llmResponse && llmResponse.success) {
         const currentTab = tabs[0];
         const currentUrl = currentTab.url;
         llmResponse.result += `\n\n[Link to the source](${currentUrl})`;
 
         if (resultContainer) {
-            resultContainer.textContent = llmResponse.result;
+            resultContainer.innerHTML = llmResponse.result.replace(/\n/g, '<br>');
         } else {
             console.error('Error: resultContainer element not found.');
         }
