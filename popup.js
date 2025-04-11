@@ -1,10 +1,13 @@
 console.log('Popup script loaded'); // Debugging line to indicate script loading
 
+const PATTERN_BASE_URL = 'https://raw.githubusercontent.com/danielmiessler/fabric/main/patterns';
+const GITHUB_API_URL = 'https://api.github.com/repos/danielmiessler/fabric/contents/patterns';
+
 async function fetchPatternPrompts(patternName) {
-    const systemPrompt = await fetch(`https://raw.githubusercontent.com/danielmiessler/fabric/main/patterns/${patternName}/system.md`)
+    const systemPrompt = await fetch(`${PATTERN_BASE_URL}/${patternName}/system.md`)
         .then(response => response.text());
 
-    const userPrompt = await fetch(`https://raw.githubusercontent.com/danielmiessler/fabric/main/patterns/${patternName}/user.md`)
+    const userPrompt = await fetch(`${PATTERN_BASE_URL}/${patternName}/user.md`)
         .then(response => response.text());
 
     return { systemPrompt, userPrompt };
@@ -16,7 +19,7 @@ async function getPatternPrompts(patternName) {
 }
 
 async function fetchPatternNames() {
-    const response = await fetch('https://api.github.com/repos/danielmiessler/fabric/contents/patterns');
+    const response = await fetch(GITHUB_API_URL);
     const data = await response.json();
     console.log('Fetched pattern data:', data); // Debugging line to check fetched data
     const patternNames = data.map(item => item.name);
@@ -45,12 +48,19 @@ async function populateDropdown() {
     const patternNames = await fetchPatternNames();
     const dropdown = document.getElementById('patternSelect'); // Ensure this ID matches the dropdown in your HTML
 
-    patternNames.forEach(name => {
+    // patternNames.forEach(name => {
+    //     const option = document.createElement('option');
+    //     option.value = name;
+    //     option.textContent = name;
+    //     dropdown.appendChild(option);
+    // });
+
+    await Promise.all(patternNames.map(name => {
         const option = document.createElement('option');
         option.value = name;
         option.textContent = name;
         dropdown.appendChild(option);
-    });
+    }));
     
     // Load the previously selected pattern from storage
     chrome.storage.local.get(['selected_pattern'], (result) => {
@@ -113,6 +123,11 @@ document.getElementById('processButton').addEventListener('click', async () => {
 
     // Get the user-selected pattern name
     const patternSelect = document.getElementById('patternSelect');
+    if (!patternSelect) {
+        console.error('Pattern select element not found.');
+        alert('Please select a pattern from the dropdown.');
+        return;
+    }
     const selectedPattern = patternSelect.value;
 
     // Save the selected pattern to local storage
@@ -145,7 +160,8 @@ document.getElementById('processButton').addEventListener('click', async () => {
     });
 
     resultContainer = document.getElementById('resultContainer');
-    if (llmResponse && llmResponse.success) {
+
+    if (llmResponse && llmResponse.success && llmResponse.result) {
         const currentTab = tabs[0];
         const currentUrl = currentTab.url;
         llmResponse.result += `\n\n[Link to the source](${currentUrl})`;
@@ -164,10 +180,10 @@ document.getElementById('processButton').addEventListener('click', async () => {
 
     // save the llmResponse.result to system clipboard
     navigator.clipboard.writeText(llmResponse.result).then(() => {
-        // prompt the user that the text has been copied to clipboard with an alert
         alert('LLM response copied to clipboard!');
         console.log('LLM response copied to clipboard');
     }).catch(err => {
+        alert('Failed to copy text to clipboard. PLease try again.');
         console.error('Failed to copy text: ', err);
     });
 });
