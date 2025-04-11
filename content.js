@@ -7,17 +7,11 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
 
 function extractTextContent() {
     let textContent = '';
-    // const elements = document.body.getElementsByTagName('*');
     const visibleElements = getVisibleText();
   
-    // console.log('Extracting text from elements:', elements); // Debugging line to check extracted elements
     console.log('Extracting text from visible elements:', visibleElements); // Debugging line to check extracted elements
     
     for (let element of visibleElements) {
-      // // exclude element of ads, style, script, meta, format, and other trivial elements
-      // if (element.tag === 'SCRIPT' || element.tagName === 'STYLE' || element.tagName === 'META' || element.tagName === 'LINK' || element.tagName === 'HEAD') {
-      //     continue;
-      // }
       if (element.text) {
         textContent += element.text + '\\n';
       }
