@@ -6,7 +6,11 @@
   "permissions": [
     "activeTab",
     "scripting",
-    "storage"
+    "storage",
+    "tabs"
+  ],
+  "host_permissions": [
+    "<all_urls>"
   ],
   "background": {
     "service_worker": "background.js"
@@ -20,9 +24,14 @@
   "content_scripts": [
     {
         "matches": ["<all_urls>"],
-        "js": ["content.js"]
+        "js": ["pdf.js", "pdf.worker.js", "content.js"],
+        "run_at": "document_idle"
     }
- ],
+  ],
+  "web_accessible_resources": [{
+    "resources": ["pdf.worker.js"],
+    "matches": ["<all_urls>"]
+  }],
   "icons": {
     "128": "images/icon128.png"
   }
