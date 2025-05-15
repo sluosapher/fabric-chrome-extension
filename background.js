@@ -3,6 +3,10 @@ chrome.runtime.onInstalled.addListener(() => {
   console.log('Fabric Extension installed.');
 });
 
+// Helper function to check if URL is YouTube
+function isYouTubeUrl(url) {
+  return url.includes('youtube.com/watch');
+}
 
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   if (request.action === 'sendToLLM') {
@@ -57,22 +61,65 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
         }
     });
     return true; // Indicates that the response will be sent asynchronously
-}
+  }
 
   if (request.action === 'extractText') {
-    chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+    chrome.tabs.query({ active: true, currentWindow: true }, async (tabs) => {
       if (tabs.length > 0) {
-        chrome.tabs.sendMessage(tabs[0].id, { 
-          action: 'extractText',
-          pageRange: request.pageRange 
-        }, (response) => {
-          sendResponse(response);
-        });
+        const currentTab = tabs[0];
+        console.log('Current URL:', currentTab.url);
+
+        if (isYouTubeUrl(currentTab.url)) {
+          console.log('YouTube URL detected, injecting content script...');
+          
+          try {
+            // First, check if our content script is already injected
+            await chrome.scripting.executeScript({
+              target: { tabId: currentTab.id },
+              func: () => {
+                return window.youtubeTranscriptExtractorInjected === true;
+              }
+            });
+
+            // Inject the content script if not already injected
+            await chrome.scripting.executeScript({
+              target: { tabId: currentTab.id },
+              files: ['youtube-content.js']
+            });
+
+            console.log('YouTube content script injected successfully');
+
+            // Send message to content script
+            chrome.tabs.sendMessage(currentTab.id, { 
+              action: 'processYouTubeVideo'
+            }, (response) => {
+              console.log('Response from YouTube content script:', response);
+              if (response && response.success) {
+                sendResponse({ success: true, text: response.transcript });
+              } else {
+                sendResponse({ 
+                  success: false, 
+                  error: response?.error || 'Failed to process YouTube video'
+                });
+              }
+            });
+          } catch (error) {
+            console.error('Error handling YouTube video:', error);
+            sendResponse({ success: false, error: error.message });
+          }
+        } else {
+          // Handle non-YouTube content as before
+          chrome.tabs.sendMessage(currentTab.id, { 
+            action: 'extractText',
+            pageRange: request.pageRange 
+          }, (response) => {
+            sendResponse(response);
+          });
+        }
       } else {
         sendResponse({ error: 'No active tab found' });
       }
     });
     return true; // Indicates that the response will be sent asynchronously
   }
-
 });

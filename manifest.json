@@ -26,6 +26,11 @@
         "matches": ["<all_urls>"],
         "js": ["pdf.js", "pdf.worker.js", "content.js"],
         "run_at": "document_idle"
+    },
+    {
+        "matches": ["*://*.youtube.com/*"],
+        "js": ["youtube-content.js"],
+        "run_at": "document_idle"
     }
   ],
   "web_accessible_resources": [{
