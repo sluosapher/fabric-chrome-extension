@@ -7,21 +7,52 @@ function isPDF() {
          window.location.href.toLowerCase().endsWith('.pdf');
 }
 
+// Function to parse page ranges
+function parsePageRanges(pageRangeStr, maxPages) {
+  if (!pageRangeStr || pageRangeStr.trim() === '') {
+    return Array.from({ length: maxPages }, (_, i) => i + 1);
+  }
+
+  const pages = new Set();
+  const ranges = pageRangeStr.split(',').map(range => range.trim());
+
+  for (const range of ranges) {
+    if (range.includes('-')) {
+      const [start, end] = range.split('-').map(num => parseInt(num.trim()));
+      if (isNaN(start) || isNaN(end) || start < 1 || end > maxPages || start > end) {
+        throw new Error(`Invalid page range: ${range}`);
+      }
+      for (let i = start; i <= end; i++) {
+        pages.add(i);
+      }
+    } else {
+      const pageNum = parseInt(range);
+      if (isNaN(pageNum) || pageNum < 1 || pageNum > maxPages) {
+        throw new Error(`Invalid page number: ${range}`);
+      }
+      pages.add(pageNum);
+    }
+  }
+
+  return Array.from(pages).sort((a, b) => a - b);
+}
+
 // Function to extract text from PDF
-async function extractPDFText() {
+async function extractPDFText(pageRangeStr = '') {
   try {
     const pdfUrl = window.location.href;
     const loadingTask = pdfjsLib.getDocument(pdfUrl);
     const pdf = await loadingTask.promise;
     
     let textContent = '';
+    const pagesToExtract = parsePageRanges(pageRangeStr, pdf.numPages);
     
-    // Extract text from each page
-    for (let i = 1; i <= pdf.numPages; i++) {
-      const page = await pdf.getPage(i);
+    // Extract text from specified pages
+    for (const pageNum of pagesToExtract) {
+      const page = await pdf.getPage(pageNum);
       const content = await page.getTextContent();
       const strings = content.items.map(item => item.str);
-      textContent += strings.join(' ') + '\n';
+      textContent += `[Page ${pageNum}]\n${strings.join(' ')}\n\n`;
     }
     
     return textContent;
@@ -119,7 +150,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
       try {
         let textContent;
         if (isPDF()) {
-          textContent = await extractPDFText();
+          textContent = await extractPDFText(request.pageRange);
         } else {
           textContent = extractWebPageText();
         }
@@ -130,5 +161,10 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
       }
     })();
     return true; // Will respond asynchronously
+  }
+
+  if (request.action === 'checkIsPDF') {
+    sendResponse({ isPDF: isPDF() });
+    return true;
   }
 });

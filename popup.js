@@ -80,6 +80,33 @@ async function populateDropdown() {
 // Call populateDropdown when the document is ready
 document.addEventListener('DOMContentLoaded', populateDropdown);
 
+// Function to check if current page is PDF and show/hide page selector
+async function checkAndUpdatePDFUI() {
+    const tabs = await chrome.tabs.query({ active: true, currentWindow: true });
+    if (tabs.length === 0) return;
+
+    try {
+        const response = await new Promise((resolve) => {
+            chrome.tabs.sendMessage(tabs[0].id, { action: 'checkIsPDF' }, resolve);
+        });
+        
+        const pdfPageSelector = document.getElementById('pdfPageSelector');
+        if (response && response.isPDF) {
+            pdfPageSelector.style.display = 'block';
+        } else {
+            pdfPageSelector.style.display = 'none';
+        }
+    } catch (error) {
+        console.error('Error checking PDF status:', error);
+    }
+}
+
+// Call this when popup opens
+document.addEventListener('DOMContentLoaded', async () => {
+    await checkAndUpdatePDFUI();
+    // ... rest of your existing DOMContentLoaded code ...
+});
+
 document.getElementById('processButton').addEventListener('click', async () => {
     // first showing "working..." message
     let resultContainer = document.getElementById('resultContainer');
@@ -94,7 +121,7 @@ document.getElementById('processButton').addEventListener('click', async () => {
     const configResponse = await new Promise((resolve) => {
         chrome.runtime.sendMessage({ action: 'checkConfig' }, resolve);
     });
-    console.log('Configuration check response:', configResponse); // Debugging line to check configuration response
+    console.log('Configuration check response:', configResponse);
     if (!configResponse.success) {
         console.error('Configuration is invalid:', configResponse.error);
         return;
@@ -109,11 +136,18 @@ document.getElementById('processButton').addEventListener('click', async () => {
         return;
     }
 
+    // Get page range if it's a PDF
+    const pageInput = document.getElementById('pageInput');
+    const pageRange = pageInput && pageInput.style.display !== 'none' ? pageInput.value : '';
+
     // Send the "extractText" action to the background script
     const extractResponse = await new Promise((resolve) => {
-        chrome.runtime.sendMessage({ action: 'extractText' }, resolve);
+        chrome.runtime.sendMessage({ 
+            action: 'extractText',
+            pageRange: pageRange
+        }, resolve);
     });
-    console.log('Extract response:', extractResponse); // Debugging line to check extract response
+    console.log('Extract response:', extractResponse);
     if (!extractResponse || !extractResponse.text) {
         console.error('Failed to extract text or no response received.');
         return;

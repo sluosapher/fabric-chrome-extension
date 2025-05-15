@@ -61,15 +61,18 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
 
   if (request.action === 'extractText') {
     chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
-        if (tabs.length > 0) {
-            chrome.tabs.sendMessage(tabs[0].id, { action: 'extractText' }, (response) => {
-                sendResponse(response);
-            });
-        } else {
-            sendResponse({ error: 'No active tab found' });
-        }
+      if (tabs.length > 0) {
+        chrome.tabs.sendMessage(tabs[0].id, { 
+          action: 'extractText',
+          pageRange: request.pageRange 
+        }, (response) => {
+          sendResponse(response);
+        });
+      } else {
+        sendResponse({ error: 'No active tab found' });
+      }
     });
     return true; // Indicates that the response will be sent asynchronously
-}
+  }
 
 });
